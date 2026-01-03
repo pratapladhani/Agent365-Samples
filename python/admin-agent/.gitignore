@@ -56,6 +56,7 @@ htmlcov/
 # Logs
 *.log
 logs/
+TerminalOutput.txt
 
 # Observability data
 telemetry/
@@ -64,7 +65,9 @@ traces/
 
 # Agent 365 specific
 a365.config.json
+a365.generated.config.json
 *.user
+publish/
 
 # Secrets and keys
 *.pem
