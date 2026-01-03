@@ -58,14 +58,26 @@ from microsoft_agents_a365.tooling.extensions.agentframework.services.mcp_tool_r
 class AdminAgent:
     """Admin Agent for calendar management."""
 
-    AGENT_PROMPT = """You are Admin Agent, a helpful calendar management assistant.
+    AGENT_PROMPT = """You are Atlas Agent, an expert calendar management assistant for busy executives and administrators.
 
-You help users manage their calendars and meetings efficiently. Be friendly, professional, and proactive in helping users organize their time."""
+Your capabilities include:
+- Managing calendar events (create, update, delete, list)
+- Finding optimal meeting times across multiple calendars
+- Accepting and declining meeting invitations
+- Resolving calendar conflicts
+- Searching for user information and availability
+- Sending email notifications about meetings
+
+Always be professional, proactive, and help users organize their time efficiently. When scheduling meetings, consider time zones, working hours, and existing commitments."""
 
     def __init__(self):
         """Initialize the Admin Agent"""
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("Admin Agent initialized")
+        
+        # Initialize MCP tool service
+        self.mcp_tool_service = McpToolRegistrationService()
+        self.tools_registered = False
         
         # Enable observability
         self._enable_instrumentation()
@@ -73,7 +85,7 @@ You help users manage their calendars and meetings efficiently. Be friendly, pro
         # Create Azure OpenAI client
         self._create_chat_client()
         
-        # Create the agent
+        # Create the agent (tools will be added later when handling messages)
         self._create_agent()
 
     # =========================================================================
@@ -145,13 +157,73 @@ You help users manage their calendars and meetings efficiently. Be friendly, pro
             Agent response
         """
         try:
+            # Register MCP tools if not already done
+            if not self.tools_registered:
+                await self._setup_mcp_tools(auth, auth_handler_name, context)
+            
             # Process message with agent
-            response = await self.agent.run(message)
-            return str(response)
+            if self.agent:
+                response = await self.agent.run(message)
+                return str(response)
+            else:
+                return "Agent is not properly initialized. Please try again."
             
         except Exception as e:
             self.logger.error(f"Error handling message: {e}", exc_info=True)
             return f"I encountered an error: {str(e)}. Please try again."
+
+    async def _setup_mcp_tools(self, auth: Authorization, auth_handler_name: str, context: TurnContext):
+        """
+        Set up MCP tool servers for the agent.
+        
+        Args:
+            auth: Authorization object
+            auth_handler_name: Name of auth handler
+            context: Turn context
+        """
+        try:
+            self.logger.info("Setting up MCP tool servers...")
+            
+            # Get agent instance ID from context
+            agentic_app_id = getattr(context.activity, 'from_property', None)
+            if agentic_app_id and hasattr(agentic_app_id, 'aad_object_id'):
+                agentic_app_id = agentic_app_id.aad_object_id
+            else:
+                # Fallback to a default or extract from elsewhere
+                agentic_app_id = None
+            
+            # Register tools with the agent
+            use_agentic_auth = os.getenv("USE_AGENTIC_AUTH", "true").lower() == "true"
+            
+            if use_agentic_auth:
+                self.agent = await self.mcp_tool_service.add_tool_servers_to_agent(
+                    chat_client=self.chat_client,
+                    agent_instructions=self.AGENT_PROMPT,
+                    initial_tools=[],
+                    auth=auth,
+                    auth_handler_name=auth_handler_name,
+                    turn_context=context,
+                )
+            else:
+                # For bearer token auth (development only)
+                auth_token = os.getenv("BEARER_TOKEN")
+                self.agent = await self.mcp_tool_service.add_tool_servers_to_agent(
+                    chat_client=self.chat_client,
+                    agent_instructions=self.AGENT_PROMPT,
+                    initial_tools=[],
+                    auth=auth,
+                    auth_handler_name=auth_handler_name,
+                    auth_token=auth_token,
+                    turn_context=context,
+                )
+            
+            self.tools_registered = True
+            self.logger.info("✅ MCP tool servers registered successfully")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to setup MCP tools: {e}", exc_info=True)
+            # Continue without tools rather than failing completely
+            self.tools_registered = False
 
     # =========================================================================
     # CONTEXT HELPERS
