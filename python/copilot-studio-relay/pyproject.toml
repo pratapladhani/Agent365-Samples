@@ -1,0 +1,19 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+[project]
+name = "copilot-studio-relay"
+version = "0.1.0"
+description = "Relay service connecting Agent 365 to Copilot Studio agents"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "python-dotenv>=1.0.0",
+    "microsoft-agents>=1.0.0",
+    "azure-identity>=1.15.0",
+    "requests>=2.31.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
