@@ -173,8 +173,8 @@ Always be professional, proactive, and help users organize their time efficientl
             
             # Process message with agent
             if self.agent:
-                response = await self.agent.run(message)
-                return str(response)
+                result = await self.agent.run(message)
+                return self._extract_result(result) or "I couldn't process your request at this time."
             else:
                 return "Agent is not properly initialized. Please try again."
             
@@ -262,6 +262,19 @@ Always be professional, proactive, and help users organize their time efficientl
         except Exception as e:
             self.logger.warning(f"Could not extract user name: {e}")
             return "User"
+
+    def _extract_result(self, result) -> str:
+        """Extract text content from agent result"""
+        if not result:
+            return ""
+        if hasattr(result, "contents"):
+            return str(result.contents)
+        elif hasattr(result, "text"):
+            return str(result.text)
+        elif hasattr(result, "content"):
+            return str(result.content)
+        else:
+            return str(result)
 
     # =========================================================================
     # DEVUI INTEGRATION
