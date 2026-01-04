@@ -169,17 +169,24 @@ Always be professional, proactive, and help users organize their time efficientl
         try:
             # Register MCP tools if not already done
             if not self.tools_registered:
+                self.logger.info("🔧 Registering MCP tools...")
                 await self._setup_mcp_tools(auth, auth_handler_name, context)
+                self.logger.info(f"🔧 Tools registered: {self.tools_registered}, Agent: {self.agent is not None}")
             
             # Process message with agent
             if self.agent:
+                self.logger.info(f"🤖 Running agent with message: {message[:50]}...")
                 result = await self.agent.run(message)
-                return self._extract_result(result) or "I couldn't process your request at this time."
+                self.logger.info(f"✅ Agent run completed, result type: {type(result)}")
+                response = self._extract_result(result) or "I couldn't process your request at this time."
+                self.logger.info(f"📤 Sending response: {response[:100]}...")
+                return response
             else:
+                self.logger.error("❌ Agent is None after tool setup!")
                 return "Agent is not properly initialized. Please try again."
             
         except Exception as e:
-            self.logger.error(f"Error handling message: {e}", exc_info=True)
+            self.logger.error(f"❌ Error handling message: {e}", exc_info=True)
             return f"I encountered an error: {str(e)}. Please try again."
 
     async def _setup_mcp_tools(self, auth: Authorization, auth_handler_name: str, context: TurnContext):

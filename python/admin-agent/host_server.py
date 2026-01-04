@@ -83,14 +83,17 @@ class AdminAgentHost:
                 logger.info(f"📨 Message received: {user_message}")
                 
                 # Process message with admin agent
+                logger.info("🔄 Calling admin_agent.handle_message...")
                 response = await self.admin_agent.handle_message(
                     user_message,
                     self.agent_app.auth,
                     self.auth_handler_name,
                     context
                 )
+                logger.info(f"✅ Got response from agent: {response[:100] if response else 'None'}...")
                 
                 await context.send_activity(response)
+                logger.info("✅ Response sent to user")
 
             except Exception as e:
                 logger.error(f"❌ Error processing message: {e}", exc_info=True)
