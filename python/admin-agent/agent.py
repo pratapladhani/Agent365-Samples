@@ -96,6 +96,16 @@ Always be professional, proactive, and help users organize their time efficientl
         """Enable Agent Framework instrumentation for observability"""
         try:
             if os.getenv("ENABLE_OBSERVABILITY", "true").lower() == "true":
+                # Import observability configuration
+                from microsoft_agents_a365.observability.core import config
+                
+                # Configure observability BEFORE instrumenting
+                config.configure(
+                    service_name="atlas-admin-agent",
+                    service_namespace="ai.agents.admin",
+                )
+                
+                # Now enable instrumentation
                 AgentFrameworkInstrumentor().instrument()
                 self.logger.info("✅ Observability instrumentation enabled")
         except Exception as e:
